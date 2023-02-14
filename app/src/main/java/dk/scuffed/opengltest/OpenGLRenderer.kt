@@ -13,10 +13,9 @@ import javax.microedition.khronos.opengles.GL10
 import com.google.common.io.ByteStreams;
 
 
-class OpenGLRenderer(context: Context) : GLSurfaceView.Renderer {
-    val COORDS_PER_VERTEX = 3
+class OpenGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
+    private val COORDS_PER_VERTEX = 3
 
-    private val context = context
     private var program = 0
     private val resolution = floatArrayOf(0.0f, 0.0f)
     private val squareCoords = floatArrayOf(
@@ -61,12 +60,12 @@ class OpenGLRenderer(context: Context) : GLSurfaceView.Renderer {
 
     override fun onSurfaceCreated(unused: GL10?, config: EGLConfig?) {
         val vertexShaderStream =
-            context.getResources().openRawResource(R.raw.vertex_shader)
+            context.resources.openRawResource(R.raw.vertex_shader)
         vertexShaderCode = String(ByteStreams.toByteArray(vertexShaderStream))
         vertexShaderStream.close()
 
         val fragmentShaderStream =
-            context.getResources().openRawResource(R.raw.fragment_shader)
+            context.resources.openRawResource(R.raw.fragment_shader)
         fragmentShaderCode = String(ByteStreams.toByteArray(fragmentShaderStream))
         fragmentShaderStream.close()
 
@@ -96,13 +95,16 @@ class OpenGLRenderer(context: Context) : GLSurfaceView.Renderer {
         glClear(GLES20.GL_COLOR_BUFFER_BIT)
         glUseProgram(program)
 
-        val positionHandle = glGetAttribLocation(program, "vPosition")
+        val positionHandle = glGetAttribLocation(program, "position")
         glEnableVertexAttribArray(positionHandle)
         glVertexAttribPointer(positionHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false, vertexStride, vertexBuffer)
+
+        val delta = (System.nanoTime() - startTime).toFloat() / 1000000000.0f
         glUniform1f(
             glGetUniformLocation(program, "time"),
-            (System.nanoTime() - startTime).toFloat() / 1000000000.0f
+            delta
         )
+
         val resolutionHandle = glGetUniformLocation(program, "resolution")
         glUniform2f(resolutionHandle, resolution[0], resolution[1])
         glDrawElements(GLES20.GL_TRIANGLES, drawOrder.size, GLES20.GL_UNSIGNED_SHORT, drawListBuffer)
