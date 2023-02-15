@@ -1,8 +1,12 @@
 package dk.scuffed.opengltest
 
 import android.content.Context
+import android.graphics.SurfaceTexture
+import android.hardware.Camera
+import android.opengl.GLES11Ext
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
+import android.view.Surface
 import dk.scuffed.opengltest.gl.*
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -57,8 +61,46 @@ class OpenGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
     private lateinit var vertexShaderCode: String
     private lateinit var fragmentShaderCode: String
 
+    private lateinit var surfaceTexture: SurfaceTexture
+
+    private lateinit var camera: Camera
+
+    private val cameraResolution = floatArrayOf(0.0f, 0.0f)
+
+    private val textures: IntArray = intArrayOf(0)
+
+    private val uniforms = intArrayOf(
+        GLES20.GL_TEXTURE0,
+        GLES20.GL_TEXTURE1,
+        GLES20.GL_TEXTURE2,
+        GLES20.GL_TEXTURE3,
+        GLES20.GL_TEXTURE4,
+        GLES20.GL_TEXTURE5,
+    )
+
 
     override fun onSurfaceCreated(unused: GL10?, config: EGLConfig?) {
+        var cameraId = 0
+        for (i in 0 until Camera.getNumberOfCameras()) {
+            val cameraInfo = Camera.CameraInfo()
+            Camera.getCameraInfo(i, cameraInfo)
+            if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
+                cameraId = i
+                break;
+            }
+        }
+
+        camera = Camera.open(cameraId)
+
+        camera.setDisplayOrientation(Surface.ROTATION_0)
+
+        val parameters = camera.parameters
+        parameters.setRotation(Surface.ROTATION_0)
+        camera.parameters = parameters
+
+
+
+
         val vertexShaderStream =
             context.resources.openRawResource(R.raw.vertex_shader)
         vertexShaderCode = String(ByteStreams.toByteArray(vertexShaderStream))
@@ -72,15 +114,25 @@ class OpenGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
         glDisable(GLES20.GL_BLEND)
         glDisable(GLES20.GL_CULL_FACE)
         glDisable(GLES20.GL_DEPTH_TEST)
-        glClearColor(1.0f, 0.0f, 0.0f, 1.0f)
+        glClearColor(1.0f, 0.0f, 1.0f, 1.0f)
 
-        val vertexShader: Int = loadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode)
-        val fragmentShader: Int = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode)
-        val glCreateProgram: Int = glCreateProgram()
-        glAttachShader(glCreateProgram, vertexShader)
-        glAttachShader(glCreateProgram, fragmentShader)
-        glLinkProgram(glCreateProgram)
-        program = glCreateProgram
+        glGenTextures(textures.size, textures, 0)
+        glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textures[0])
+        glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
+        glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
+        glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
+        glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
+
+        surfaceTexture = SurfaceTexture(textures[0])
+        camera.setPreviewTexture(surfaceTexture)
+        camera.startPreview()
+
+        val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode)
+        val fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode)
+        program = glCreateProgram()
+        glAttachShader(program, vertexShader)
+        glAttachShader(program, fragmentShader)
+        glLinkProgram(program)
         startTime = System.nanoTime()
     }
 
@@ -89,10 +141,17 @@ class OpenGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
         resolution[0] = width.toFloat()
         resolution[1] = height.toFloat()
+
+        val previewSize = camera.parameters.previewSize
+        cameraResolution[0] = previewSize.width.toFloat()
+        cameraResolution[1] = previewSize.height.toFloat()
     }
 
     override fun onDrawFrame(p0: GL10?) {
         glClear(GLES20.GL_COLOR_BUFFER_BIT)
+
+        surfaceTexture.updateTexImage()
+
         glUseProgram(program)
 
         val positionHandle = glGetAttribLocation(program, "position")
@@ -107,6 +166,16 @@ class OpenGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
         val resolutionHandle = glGetUniformLocation(program, "resolution")
         glUniform2f(resolutionHandle, resolution[0], resolution[1])
+
+
+        val camTextureHandle = glGetUniformLocation(program, "cam")
+        glUniform1i(camTextureHandle, 0)
+        glActiveTexture(uniforms[0])
+        glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textures[0])
+
+        val camResolutionHandle = glGetUniformLocation(program, "camResolution")
+        glUniform2f(camResolutionHandle, cameraResolution[0], cameraResolution[1])
+
         glDrawElements(GLES20.GL_TRIANGLES, drawOrder.size, GLES20.GL_UNSIGNED_SHORT, drawListBuffer)
         glDisableVertexAttribArray(positionHandle)
     }
