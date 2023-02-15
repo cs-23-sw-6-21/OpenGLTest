@@ -4,8 +4,6 @@ import android.opengl.GLES20
 import android.util.Log
 import java.nio.Buffer
 
-import kotlin.jvm.internal.Intrinsics
-
 
 fun loadShader(type: Int, shaderCode: String): Int {
     val shader = glCreateShader(type)
@@ -53,6 +51,18 @@ fun glShaderSource(shader: Int, shaderCode: String) {
 fun glCompileShader(shader: Int) {
     GLES20.glCompileShader(shader)
     logErrorIfAny("glCompileShader")
+
+    val compiled = IntArray(1)
+    GLES20.glGetShaderiv(
+        shader,
+        GLES20.GL_COMPILE_STATUS,
+        compiled,
+        0
+    )
+
+    if (compiled[0] == GLES20.GL_FALSE) {
+        throw Exception(GLES20.glGetShaderInfoLog(shader))
+    }
 }
 
 fun glCreateProgram(): Int {
@@ -69,6 +79,18 @@ fun glAttachShader(program: Int, shader: Int) {
 fun glLinkProgram(program: Int) {
     GLES20.glLinkProgram(program)
     logErrorIfAny("glLinkProgram")
+
+    val linkStatus = IntArray(1)
+    GLES20.glGetProgramiv(
+        program,
+        GLES20.GL_LINK_STATUS,
+        linkStatus,
+        0
+    )
+
+    if (linkStatus[0] == GLES20.GL_FALSE) {
+        throw Exception(GLES20.glGetProgramInfoLog(program))
+    }
 }
 
 fun glUseProgram(program: Int) {
@@ -134,7 +156,32 @@ fun glDrawArrays(mode: Int, first: Int, count: Int) {
 
 fun glDrawElements(mode: Int, count: Int, type: Int, buffer: Buffer) {
     GLES20.glDrawElements(mode, count, type, buffer)
-    logErrorIfAny("gkDrawElements")
+    logErrorIfAny("glDrawElements")
+}
+
+fun glGenTextures(n: Int, textures: IntArray, offset: Int) {
+    GLES20.glGenTextures(n, textures, offset)
+    logErrorIfAny("glGenTextures")
+}
+
+fun glBindTexture(target: Int, texture: Int)  {
+    GLES20.glBindTexture(target, texture)
+    logErrorIfAny("glBindTexture")
+}
+
+fun glTexParameteri(target: Int, pname: Int, param: Int) {
+    GLES20.glTexParameteri(target, pname, param)
+    logErrorIfAny("glTexParameteri")
+}
+
+fun glUniform1i(location: Int, target: Int) {
+    GLES20.glUniform1i(location, target)
+    logErrorIfAny("glUniform1i")
+}
+
+fun glActiveTexture(texture: Int) {
+    GLES20.glActiveTexture(texture)
+    logErrorIfAny("glActiveTexture")
 }
 
 private fun logErrorIfAny(funcname: String) {
