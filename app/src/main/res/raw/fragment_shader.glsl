@@ -22,26 +22,39 @@ void make_kernel(inout vec4 n[9], samplerExternalOES tex, vec2 coord) {
 }
 
 void main() {
-    vec2 uv = 1.0 - (gl_FragCoord.yx / resolution.yx);
-    vec4 img = texture2D(cam, uv);
+    vec2 divThing = resolution.xy / camResolution.yx;
+    vec2 fixedCamRes = min(divThing.x, divThing.y) * camResolution.yx;
+
+    float halfThing = (fixedCamRes.y - resolution.y) / 2.0;
+
+    vec2 uv = vec2(gl_FragCoord.x / fixedCamRes.x, gl_FragCoord.y / fixedCamRes.y + halfThing / resolution.y);
+    vec2 camuv = 1.0 - uv.yx;
+
 
     vec4 n[9];
-    make_kernel(n, cam, uv);
+    make_kernel(n, cam, camuv);
+    vec4 img = texture2D(cam, camuv);
 
     vec4 sobel_edge_h = n[2] + (2.0*n[5]) + n[8] - (n[0] + (2.0*n[3]) + n[6]);
     vec4 sobel_edge_v = n[0] + (2.0*n[1]) + n[2] - (n[6] + (2.0*n[7]) + n[8]);
     vec4 sobel = sqrt((sobel_edge_h * sobel_edge_h) + (sobel_edge_v * sobel_edge_v));
 
-    if (sobel.r < 0.1 && sobel.g < 0.1 && sobel.b < 0.1) {
-        sobel = 1.0 - sobel;
+    if (sobel.r < 0.2 && sobel.g < 0.2 && sobel.b < 0.2) {
+        sobel = vec4(0.0, 0.0, 0.0, sobel.a);
     }
     else {
-        sobel = img ;
-    }
-
-    if (uv.y < 0.5) {
         sobel = img;
     }
 
-    gl_FragColor = vec4(sobel.rgb, 1.0);
+    // Make half the image just the camera
+    if (gl_FragCoord.x / resolution.x < 0.5) {
+        sobel = img;
+    }
+
+    // Draw outside camera with magenta
+    if (uv.y <= 0.0 || uv.y >= 1.0) {
+        sobel.rgb = vec3(1.0, 0.0, 1.0);
+    }
+
+    gl_FragColor = sobel;
 }
