@@ -96,6 +96,7 @@ class OpenGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
         val parameters = camera.parameters
         parameters.setRotation(Surface.ROTATION_0)
+        parameters.focusMode = Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO
         camera.parameters = parameters
 
 
