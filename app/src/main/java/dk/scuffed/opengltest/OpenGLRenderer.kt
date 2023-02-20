@@ -2,11 +2,22 @@ package dk.scuffed.opengltest
 
 import android.content.Context
 import android.graphics.SurfaceTexture
-import android.hardware.Camera
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraCharacteristics.LENS_DISTORTION_MAXIMUM_RESOLUTION
+import android.hardware.camera2.CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE
+//import android.hardware.Camera
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
+import android.util.Log
+import android.util.Size
 import android.view.Surface
+import androidx.camera.core.*
+import androidx.camera.core.AspectRatio.RATIO_16_9
+import androidx.camera.core.Preview.SurfaceProvider
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
 import dk.scuffed.opengltest.gl.*
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -15,6 +26,7 @@ import java.nio.ShortBuffer
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 import com.google.common.io.ByteStreams;
+import java.util.logging.Handler
 
 
 class OpenGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
@@ -80,28 +92,6 @@ class OpenGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
 
     override fun onSurfaceCreated(unused: GL10?, config: EGLConfig?) {
-        var cameraId = 0
-        for (i in 0 until Camera.getNumberOfCameras()) {
-            val cameraInfo = Camera.CameraInfo()
-            Camera.getCameraInfo(i, cameraInfo)
-            if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
-                cameraId = i
-                break;
-            }
-        }
-
-        camera = Camera.open(cameraId)
-
-        camera.setDisplayOrientation(Surface.ROTATION_0)
-
-        val parameters = camera.parameters
-        parameters.setRotation(Surface.ROTATION_0)
-        parameters.focusMode = Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO
-        camera.parameters = parameters
-
-
-
-
         val vertexShaderStream =
             context.resources.openRawResource(R.raw.vertex_shader)
         vertexShaderCode = String(ByteStreams.toByteArray(vertexShaderStream))
@@ -124,10 +114,6 @@ class OpenGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
         glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
         glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
 
-        surfaceTexture = SurfaceTexture(textures[0])
-        camera.setPreviewTexture(surfaceTexture)
-        camera.startPreview()
-
         val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode)
         val fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode)
         program = glCreateProgram()
@@ -135,6 +121,34 @@ class OpenGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
         glAttachShader(program, fragmentShader)
         glLinkProgram(program)
         startTime = System.nanoTime()
+
+        surfaceTexture = SurfaceTexture(textures[0])
+        surfaceTexture.setDefaultBufferSize(1920, 1080)
+
+        val cameraSelector = CameraSelector.Builder()
+            .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+            .build()
+        val handler = android.os.Handler(context.mainLooper)
+
+        handler.post { run {
+            val preview : Preview = Preview.Builder()
+                .setTargetAspectRatio(RATIO_16_9)
+                .build()
+
+            preview.setSurfaceProvider(object : SurfaceProvider {
+                override fun onSurfaceRequested(request: SurfaceRequest) {
+                    val surfaceNew = Surface(surfaceTexture)
+                    request.provideSurface(surfaceNew, ContextCompat.getMainExecutor(context), { result: SurfaceRequest.Result -> SurfaceRequest.Result.RESULT_SURFACE_USED_SUCCESSFULLY})
+                }
+            })
+
+            val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+            val cameraProvider = cameraProviderFuture.get()
+            camera = cameraProvider.bindToLifecycle(context as LifecycleOwner, cameraSelector, preview)
+            cameraResolution[0] = preview.resolutionInfo!!.resolution.width.toFloat()
+            cameraResolution[1] = preview.resolutionInfo!!.resolution.height.toFloat()
+            Log.i("TEST", "Width: ${cameraResolution[0]}, Height: ${cameraResolution[1]}")
+        } }
     }
 
     override fun onSurfaceChanged(unused: GL10?, width: Int, height: Int) {
@@ -142,10 +156,6 @@ class OpenGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
         resolution[0] = width.toFloat()
         resolution[1] = height.toFloat()
-
-        val previewSize = camera.parameters.previewSize
-        cameraResolution[0] = previewSize.width.toFloat()
-        cameraResolution[1] = previewSize.height.toFloat()
     }
 
     override fun onDrawFrame(p0: GL10?) {

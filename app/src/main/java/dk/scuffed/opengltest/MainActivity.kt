@@ -1,11 +1,11 @@
 package dk.scuffed.opengltest
 
-import android.app.Activity
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 
-class MainActivity : Activity() {
+class MainActivity : AppCompatActivity() {
     private val CAMERA_PERMISSION_REQUEST_CODE = 100
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
