@@ -3,6 +3,8 @@ package dk.scuffed.opengltest.gl
 import android.opengl.GLES20
 import android.util.Log
 import java.nio.Buffer
+import java.nio.ByteBuffer
+import java.security.InvalidParameterException
 
 
 fun loadShader(type: Int, shaderCode: String): Int {
@@ -139,6 +141,11 @@ fun glUniform1f(location: Int, value: Float) {
     logErrorIfAny("glUniform1f")
 }
 
+fun glUniform1fv(location: Int, count: Int, value: FloatArray, offset: Int) {
+    GLES20.glUniform1fv(location, count, value, offset)
+    logErrorIfAny("glUniform1fv")
+}
+
 fun glUniform2f(location: Int, x: Float, y: Float) {
     GLES20.glUniform2f(location, x, y)
     logErrorIfAny("glUniform2f")
@@ -164,6 +171,12 @@ fun glGenTextures(n: Int, textures: IntArray, offset: Int) {
     logErrorIfAny("glGenTextures")
 }
 
+fun glGenTexture(): Int {
+    val textures = intArrayOf(999)
+    glGenTextures(textures.size, textures, 0)
+    return textures[0]
+}
+
 fun glBindTexture(target: Int, texture: Int)  {
     GLES20.glBindTexture(target, texture)
     logErrorIfAny("glBindTexture")
@@ -182,6 +195,47 @@ fun glUniform1i(location: Int, target: Int) {
 fun glActiveTexture(texture: Int) {
     GLES20.glActiveTexture(texture)
     logErrorIfAny("glActiveTexture")
+}
+
+fun glTexImage2D(target: Int, level: Int, format: Int, width: Int, height: Int, type: Int, data: ByteBuffer?) {
+    GLES20.glTexImage2D(target, level, format, width, height, 0, format, type, data)
+    logErrorIfAny("glTexImage2D")
+}
+
+fun glReadPixels(x: Int, y: Int, width: Int, height: Int, format: Int): ByteBuffer {
+    val bytesPerPixel = when (format) {
+        GLES20.GL_RGBA -> 4
+        GLES20.GL_RGB -> 3
+        GLES20.GL_ALPHA -> 1
+        else -> throw InvalidParameterException("format")
+    }
+
+    val byteBuffer = ByteBuffer.allocateDirect((width - x) * (height - y) * bytesPerPixel)
+    GLES20.glReadPixels(x, y, width, height, format, GLES20.GL_UNSIGNED_BYTE, byteBuffer)
+    logErrorIfAny("glReadPixels")
+
+    return byteBuffer
+}
+
+fun glGenFramebuffers(count: Int, array: IntArray, offset: Int) {
+    GLES20.glGenFramebuffers(count, array, offset)
+    logErrorIfAny("glGenFramebuffers")
+}
+
+fun glGenFramebuffer(): Int {
+    val framebuffers = intArrayOf(999)
+    glGenFramebuffers(framebuffers.size, framebuffers, 0)
+    return framebuffers[0]
+}
+
+fun glBindFramebuffer(fboHandle: Int) {
+    GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, fboHandle)
+    logErrorIfAny("glBindFramebuffer")
+}
+
+fun glFramebufferTexture2D(attachment: Int, textureTarget: Int, textureHandle: Int) {
+    GLES20.glFramebufferTexture2D(GLES20.GL_FRAMEBUFFER, attachment, textureTarget, textureHandle, 0)
+    logErrorIfAny("glFramebufferTexture")
 }
 
 private fun logErrorIfAny(funcname: String) {
