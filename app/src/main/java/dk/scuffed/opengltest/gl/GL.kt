@@ -3,6 +3,7 @@ package dk.scuffed.opengltest.gl
 import android.opengl.GLES20
 import android.util.Log
 import java.nio.Buffer
+import java.nio.ByteBuffer
 
 
 fun loadShader(type: Int, shaderCode: String): Int {
@@ -139,6 +140,11 @@ fun glUniform1f(location: Int, value: Float) {
     logErrorIfAny("glUniform1f")
 }
 
+fun glUniform1fv(location: Int, count: Int, value: FloatArray, offset: Int) {
+    GLES20.glUniform1fv(location, count, value, offset)
+    logErrorIfAny("glUniform1fv")
+}
+
 fun glUniform2f(location: Int, x: Float, y: Float) {
     GLES20.glUniform2f(location, x, y)
     logErrorIfAny("glUniform2f")
@@ -182,6 +188,11 @@ fun glUniform1i(location: Int, target: Int) {
 fun glActiveTexture(texture: Int) {
     GLES20.glActiveTexture(texture)
     logErrorIfAny("glActiveTexture")
+}
+
+fun glTexImage2D(target: Int, level: Int, format: Int, width: Int, height: Int, type: Int, data: ByteBuffer) {
+    GLES20.glTexImage2D(target, level, format, width, height, 0, format, type, data)
+    logErrorIfAny("glTexImage2D")
 }
 
 private fun logErrorIfAny(funcname: String) {

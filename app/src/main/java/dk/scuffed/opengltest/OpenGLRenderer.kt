@@ -2,15 +2,10 @@ package dk.scuffed.opengltest
 
 import android.content.Context
 import android.graphics.SurfaceTexture
-import android.hardware.camera2.CameraCharacteristics
-import android.hardware.camera2.CameraCharacteristics.LENS_DISTORTION_MAXIMUM_RESOLUTION
-import android.hardware.camera2.CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE
-//import android.hardware.Camera
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.util.Log
-import android.util.Size
 import android.view.Surface
 import androidx.camera.core.*
 import androidx.camera.core.AspectRatio.RATIO_16_9
@@ -18,15 +13,11 @@ import androidx.camera.core.Preview.SurfaceProvider
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import com.google.common.io.ByteStreams
 import dk.scuffed.opengltest.gl.*
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.nio.FloatBuffer
-import java.nio.ShortBuffer
+import java.nio.*
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
-import com.google.common.io.ByteStreams;
-import java.util.logging.Handler
 
 
 class OpenGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
@@ -77,6 +68,8 @@ class OpenGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
     private lateinit var camera: Camera
 
+    private val gaussianKernelSize: Int = 5
+
     private val cameraResolution = floatArrayOf(0.0f, 0.0f)
 
     private val textures: IntArray = intArrayOf(0)
@@ -89,6 +82,11 @@ class OpenGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
         GLES20.GL_TEXTURE4,
         GLES20.GL_TEXTURE5,
     )
+
+
+    // https://www.rastergrid.com/blog/2010/09/efficient-gaussian-blur-with-linear-sampling/
+    private val gaussianOffsets = floatArrayOf(0.0f, 1.3846153846f, 3.2307692308f)
+    private val gaussianWeights = floatArrayOf(0.2270270270f, 0.3162162162f / 2.0f, 0.0702702703f / 2.0f)
 
 
     override fun onSurfaceCreated(unused: GL10?, config: EGLConfig?) {
@@ -113,6 +111,8 @@ class OpenGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
         glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
         glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
         glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
+        glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0)
+
 
         val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode)
         val fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode)
@@ -186,6 +186,16 @@ class OpenGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
         val camResolutionHandle = glGetUniformLocation(program, "camResolution")
         glUniform2f(camResolutionHandle, cameraResolution[0], cameraResolution[1])
+
+
+        val gaussianKernelSizeHandle = glGetUniformLocation(program, "gaussianKernelSize")
+        glUniform1i(gaussianKernelSizeHandle, 3)
+
+        val gaussianOffsetsHandle = glGetUniformLocation(program, "gaussianOffsets")
+        glUniform1fv(gaussianOffsetsHandle, gaussianOffsets.size, gaussianOffsets, 0)
+
+        val gaussianWeightsHandle = glGetUniformLocation(program, "gaussianWeights")
+        glUniform1fv(gaussianWeightsHandle, gaussianWeights.size, gaussianWeights, 0)
 
         glDrawElements(GLES20.GL_TRIANGLES, drawOrder.size, GLES20.GL_UNSIGNED_SHORT, drawListBuffer)
         glDisableVertexAttribArray(positionHandle)
