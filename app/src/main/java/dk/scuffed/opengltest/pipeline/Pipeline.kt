@@ -3,9 +3,8 @@ package dk.scuffed.opengltest.pipeline
 import android.content.Context
 import android.opengl.GLES20
 import android.util.Size
-import com.google.common.io.ByteStreams
-import dk.scuffed.opengltest.R
 import dk.scuffed.opengltest.gl.*
+import dk.scuffed.opengltest.pipeline.stages.*
 import dk.scuffed.opengltest.pipeline.stages.CameraXStage
 import dk.scuffed.opengltest.pipeline.stages.DrawFramebufferStage
 import dk.scuffed.opengltest.pipeline.stages.TestStage
@@ -13,10 +12,16 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
 import java.nio.ShortBuffer
+import dk.scuffed.opengltest.pipeline.stages.GaussianBlurStage
+import dk.scuffed.opengltest.pipeline.stages.SobelStage
 
 class Pipeline(context: Context) {
 
     private val cameraXStage: CameraXStage
+    private val gaussianBlurXStage: GaussianBlurStage
+    private val gaussianBlurYStage: GaussianBlurStage
+    private val grayscaleStage: GrayscaleStage
+    private val sobelStage: SobelStage
     private val drawFramebufferInfo: DrawFramebufferStage
     private val testStage: TestStage
 
@@ -56,9 +61,35 @@ class Pipeline(context: Context) {
             this
         )
 
-        testStage = TestStage(
+        gaussianBlurXStage = GaussianBlurStage(
             context,
             cameraXStage.frameBufferInfo,
+            true,
+            this
+        )
+
+        gaussianBlurYStage = GaussianBlurStage(
+            context,
+            gaussianBlurXStage.frameBufferInfo,
+            false,
+            this
+        )
+
+        grayscaleStage = GrayscaleStage(
+            context,
+            gaussianBlurYStage.frameBufferInfo,
+            this
+        )
+
+        sobelStage = SobelStage(
+            context,
+            grayscaleStage.frameBufferInfo,
+            this
+        )
+
+        drawFramebufferInfo = DrawFramebufferStage(
+            context,
+            sobelStage.frameBufferInfo,
             this
         )
 
@@ -71,7 +102,10 @@ class Pipeline(context: Context) {
 
     fun draw() {
         cameraXStage.draw()
-        testStage.draw()
+        gaussianBlurXStage.draw()
+        gaussianBlurYStage.draw()
+        grayscaleStage.draw()
+        sobelStage.draw()
         drawFramebufferInfo.draw()
     }
 

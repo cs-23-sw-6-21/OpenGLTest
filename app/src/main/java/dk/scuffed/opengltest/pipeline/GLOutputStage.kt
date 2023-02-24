@@ -17,10 +17,10 @@ internal abstract class GLOutputStage(private val context: Context, private val 
 
     private val coordsPerVertex = 3
     private val squareCoords = floatArrayOf(
-        -1.0f, 1.0f, 0.0f,
+        -1.0f,  1.0f, 0.0f,
         -1.0f, -1.0f, 0.0f,
-        1.0f, -1.0f, 0.0f,
-        1.0f, 1.0f,0.0f
+         1.0f, -1.0f, 0.0f,
+         1.0f,  1.0f, 0.0f
     )
 
     private val drawOrder = shortArrayOf(0, 1, 2, 0, 2, 3) // order to draw vertices
