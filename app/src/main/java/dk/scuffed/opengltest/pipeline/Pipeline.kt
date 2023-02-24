@@ -7,11 +7,6 @@ import dk.scuffed.opengltest.gl.*
 import dk.scuffed.opengltest.pipeline.stages.*
 import dk.scuffed.opengltest.pipeline.stages.CameraXStage
 import dk.scuffed.opengltest.pipeline.stages.DrawFramebufferStage
-import dk.scuffed.opengltest.pipeline.stages.TestStage
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.nio.FloatBuffer
-import java.nio.ShortBuffer
 import dk.scuffed.opengltest.pipeline.stages.GaussianBlurStage
 import dk.scuffed.opengltest.pipeline.stages.SobelStage
 
@@ -23,7 +18,7 @@ class Pipeline(context: Context) {
     private val grayscaleStage: GrayscaleStage
     private val sobelStage: SobelStage
     private val drawFramebufferInfo: DrawFramebufferStage
-    private val testStage: TestStage
+    private val noiseDistortionStage: NoiseDistortionStage
 
     private var nextTextureUnit: Int = 0
 
@@ -87,7 +82,7 @@ class Pipeline(context: Context) {
             this
         )
 
-        drawFramebufferInfo = DrawFramebufferStage(
+        noiseDistortionStage = NoiseDistortionStage(
             context,
             sobelStage.frameBufferInfo,
             this
@@ -95,7 +90,7 @@ class Pipeline(context: Context) {
 
         drawFramebufferInfo = DrawFramebufferStage(
             context,
-            testStage.frameBufferInfo,
+            noiseDistortionStage.frameBufferInfo,
             this
         )
     }
@@ -106,6 +101,7 @@ class Pipeline(context: Context) {
         gaussianBlurYStage.draw()
         grayscaleStage.draw()
         sobelStage.draw()
+        noiseDistortionStage.draw()
         drawFramebufferInfo.draw()
     }
 
