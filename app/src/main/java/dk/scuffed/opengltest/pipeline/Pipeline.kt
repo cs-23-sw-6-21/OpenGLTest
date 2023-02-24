@@ -18,6 +18,7 @@ class Pipeline(context: Context) {
     private val grayscaleStage: GrayscaleStage
     private val sobelStage: SobelStage
     private val drawFramebufferInfo: DrawFramebufferStage
+    private val noiseDistortionStage: NoiseDistortionStage
 
     private var nextTextureUnit: Int = 0
 
@@ -81,9 +82,15 @@ class Pipeline(context: Context) {
             this
         )
 
-        drawFramebufferInfo = DrawFramebufferStage(
+        noiseDistortionStage = NoiseDistortionStage(
             context,
             sobelStage.frameBufferInfo,
+            this
+        )
+
+        drawFramebufferInfo = DrawFramebufferStage(
+            context,
+            noiseDistortionStage.frameBufferInfo,
             this
         )
     }
@@ -94,6 +101,7 @@ class Pipeline(context: Context) {
         gaussianBlurYStage.draw()
         grayscaleStage.draw()
         sobelStage.draw()
+        noiseDistortionStage.draw()
         drawFramebufferInfo.draw()
     }
 
