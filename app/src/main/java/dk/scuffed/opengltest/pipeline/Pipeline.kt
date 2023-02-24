@@ -8,6 +8,7 @@ import dk.scuffed.opengltest.R
 import dk.scuffed.opengltest.gl.*
 import dk.scuffed.opengltest.pipeline.stages.CameraXStage
 import dk.scuffed.opengltest.pipeline.stages.DrawFramebufferStage
+import dk.scuffed.opengltest.pipeline.stages.SobelStage
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -16,6 +17,7 @@ import java.nio.ShortBuffer
 class Pipeline(context: Context) {
 
     private val cameraXStage: CameraXStage
+    private val sobelStage: SobelStage
     private val drawFramebufferInfo: DrawFramebufferStage
 
     private var nextTextureUnit: Int = 0
@@ -54,15 +56,22 @@ class Pipeline(context: Context) {
             this
         )
 
-        drawFramebufferInfo = DrawFramebufferStage(
+        sobelStage = SobelStage(
             context,
             cameraXStage.frameBufferInfo,
+            this
+        )
+
+        drawFramebufferInfo = DrawFramebufferStage(
+            context,
+            sobelStage.frameBufferInfo,
             this
         )
     }
 
     fun draw() {
         cameraXStage.draw()
+        sobelStage.draw()
         drawFramebufferInfo.draw()
     }
 
