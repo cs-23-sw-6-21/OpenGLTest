@@ -3,21 +3,18 @@ package dk.scuffed.opengltest.pipeline
 import android.content.Context
 import android.opengl.GLES20
 import android.util.Size
-import com.google.common.io.ByteStreams
-import dk.scuffed.opengltest.R
 import dk.scuffed.opengltest.gl.*
 import dk.scuffed.opengltest.pipeline.stages.CameraXStage
 import dk.scuffed.opengltest.pipeline.stages.DrawFramebufferStage
+import dk.scuffed.opengltest.pipeline.stages.GaussianBlurStage
 import dk.scuffed.opengltest.pipeline.stages.SobelStage
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.nio.FloatBuffer
-import java.nio.ShortBuffer
 
 class Pipeline(context: Context) {
 
     private val cameraXStage: CameraXStage
     private val sobelStage: SobelStage
+    private val gaussianBlurXStage: GaussianBlurStage
+    private val gaussianBlurYStage: GaussianBlurStage
     private val drawFramebufferInfo: DrawFramebufferStage
 
     private var nextTextureUnit: Int = 0
@@ -56,11 +53,26 @@ class Pipeline(context: Context) {
             this
         )
 
-        sobelStage = SobelStage(
+        gaussianBlurXStage = GaussianBlurStage(
             context,
             cameraXStage.frameBufferInfo,
+            true,
             this
         )
+
+        gaussianBlurYStage = GaussianBlurStage(
+            context,
+            gaussianBlurXStage.frameBufferInfo,
+            false,
+            this
+        )
+
+        sobelStage = SobelStage(
+            context,
+            gaussianBlurYStage.frameBufferInfo,
+            this
+        )
+
 
         drawFramebufferInfo = DrawFramebufferStage(
             context,
@@ -71,6 +83,8 @@ class Pipeline(context: Context) {
 
     fun draw() {
         cameraXStage.draw()
+        gaussianBlurXStage.draw()
+        gaussianBlurYStage.draw()
         sobelStage.draw()
         drawFramebufferInfo.draw()
     }
