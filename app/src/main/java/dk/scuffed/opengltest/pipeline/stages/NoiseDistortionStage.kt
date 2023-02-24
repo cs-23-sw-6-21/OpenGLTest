@@ -14,12 +14,12 @@ import java.nio.ByteBuffer
 internal class NoiseDistortionStage(private val context: Context, private val inputFrameBufferInfo: FramebufferInfo, private val pipeline: Pipeline): GLOutputStage(context, R.raw.vertex_shader, R.raw.shaderfun, pipeline) {
 
     // Texture data
-    lateinit var textureBuffer : ByteBuffer
+    private lateinit var textureBuffer : ByteBuffer
     private lateinit var textureUnitPair: TextureUnitPair
 
-    private var time = System.currentTimeMillis();
+    private val time = System.currentTimeMillis();
 
-    var textureHandle : Int = 0
+    private var textureHandle : Int = 0
 
     init {
         setup()
